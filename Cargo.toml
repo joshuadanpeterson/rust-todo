@@ -1,6 +1,37 @@
 [package]
 name = "rust-todo"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
+authors = ["Joshua Peterson"]
+description = "A CLI todo application for learning Rust"
+license = "MIT"
 
 [dependencies]
+# Clap - Command Line Argument Parser
+# We use the "derive" feature to automatically generate CLI parsing from structs
+clap = { version = "4.5", features = ["derive"] }
+
+# Serde - Serialization/Deserialization framework
+# "derive" feature allows us to use #[derive(Serialize, Deserialize)] on structs
+serde = { version = "1.0", features = ["derive"] }
+
+# Serde JSON - JSON support for Serde
+# This allows us to save/load our todos as JSON
+serde_json = "1.0"
+
+# Anyhow - Simplified error handling
+# Provides a convenient Result type and error propagation with context
+anyhow = "1.0"
+
+# Tracing - Structured, async-aware logging
+# Better than println! for debugging and monitoring
+tracing = "0.1"
+
+# Tracing Subscriber - Implements the subscriber for tracing
+# "env-filter" allows filtering logs by RUST_LOG env variable
+# "fmt" provides formatted output to stdout
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Chrono - Date and time library
+# Used to add timestamps to our todos
+chrono = { version = "0.4", features = ["serde"] }
