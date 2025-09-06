@@ -116,7 +116,8 @@ pub struct TodoList {
     
     /// Counter for generating unique IDs
     /// We track this separately to ensure uniqueness
-    next_id: u32,
+    /// We need to serialize this to maintain ID continuity across sessions
+    pub next_id: u32,
 }
 
 impl TodoList {
