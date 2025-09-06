@@ -235,8 +235,8 @@ mod tests {
         
         // Create a list with some todos
         let mut todos = TodoList::new();
-        todos.add_todo("Test todo 1".to_string());
-        todos.add_todo("Test todo 2".to_string());
+        todos.add_todo("Test todo 1".to_string(), None);
+        todos.add_todo("Test todo 2".to_string(), Some(3));
         
         // Save it
         save_todos(&todos).expect("Failed to save");
@@ -289,7 +289,7 @@ mod tests {
         
         // Create a file with some todos
         let mut todos = TodoList::new();
-        todos.add_todo("Test".to_string());
+        todos.add_todo("Test".to_string(), None);
         save_todos(&todos).expect("Failed to save");
         
         // Now we should get info

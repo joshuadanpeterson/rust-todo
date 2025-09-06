@@ -51,6 +51,10 @@ pub struct Todo {
     /// - None: No value present
     /// This prevents null pointer errors at compile time!
     pub completed_at: Option<DateTime<Utc>>,
+    
+    /// Priority level (1-5, where 5 is highest)
+    /// Optional field - not all todos need priorities
+    pub priority: Option<u8>,
 }
 
 // Implementation block for Todo
@@ -60,6 +64,7 @@ impl Todo {
     /// 
     /// # Arguments
     /// * `description` - The todo text
+    /// * `priority` - Optional priority level (1-5)
     /// 
     /// # Returns
     /// A new Todo instance with a generated ID
@@ -68,7 +73,7 @@ impl Todo {
     /// - `pub fn`: Public function accessible from outside the module
     /// - `String` parameter: Takes ownership of the description
     /// - `Self`: Refers to the type we're implementing (Todo)
-    pub fn new(id: u32, description: String) -> Self {
+    pub fn new(id: u32, description: String, priority: Option<u8>) -> Self {
         // 'Self' is shorthand for 'Todo' within impl blocks
         Self {
             id,
@@ -77,6 +82,7 @@ impl Todo {
             completed: false,
             created_at: Utc::now(),
             completed_at: None, // No completion time initially
+            priority,
         }
     }
     
@@ -137,6 +143,7 @@ impl TodoList {
     /// 
     /// # Arguments
     /// * `description` - The todo text
+    /// * `priority` - Optional priority level
     /// 
     /// # Returns
     /// The ID of the newly created todo
@@ -145,8 +152,8 @@ impl TodoList {
     /// - `&mut self`: We need to modify the list
     /// - `String` parameter: Takes ownership of the description
     /// - The todo is moved into the vector (ownership transfer)
-    pub fn add_todo(&mut self, description: String) -> u32 {
-        let todo = Todo::new(self.next_id, description);
+    pub fn add_todo(&mut self, description: String, priority: Option<u8>) -> u32 {
+        let todo = Todo::new(self.next_id, description, priority);
         let id = todo.id;
         
         // push() adds an element to the end of the vector
@@ -248,16 +255,23 @@ mod tests {
     
     #[test]
     fn test_create_todo() {
-        let todo = Todo::new(1, "Learn Rust".to_string());
+        let todo = Todo::new(1, "Learn Rust".to_string(), None);
         assert_eq!(todo.id, 1);
         assert_eq!(todo.description, "Learn Rust");
         assert!(!todo.completed);
         assert!(todo.completed_at.is_none());
+        assert!(todo.priority.is_none());
+    }
+    
+    #[test]
+    fn test_create_todo_with_priority() {
+        let todo = Todo::new(1, "Important task".to_string(), Some(5));
+        assert_eq!(todo.priority, Some(5));
     }
     
     #[test]
     fn test_complete_todo() {
-        let mut todo = Todo::new(1, "Learn Rust".to_string());
+        let mut todo = Todo::new(1, "Learn Rust".to_string(), None);
         todo.complete();
         assert!(todo.completed);
         assert!(todo.completed_at.is_some());
@@ -266,19 +280,20 @@ mod tests {
     #[test]
     fn test_todo_list_add() {
         let mut list = TodoList::new();
-        let id = list.add_todo("First todo".to_string());
+        let id = list.add_todo("First todo".to_string(), None);
         assert_eq!(id, 1);
         assert_eq!(list.todos.len(), 1);
         
-        let id2 = list.add_todo("Second todo".to_string());
+        let id2 = list.add_todo("Second todo".to_string(), Some(3));
         assert_eq!(id2, 2);
         assert_eq!(list.todos.len(), 2);
+        assert_eq!(list.todos[1].priority, Some(3));
     }
     
     #[test]
     fn test_todo_list_find_and_complete() {
         let mut list = TodoList::new();
-        let id = list.add_todo("Test todo".to_string());
+        let id = list.add_todo("Test todo".to_string(), None);
         
         // Find and complete the todo
         if let Some(todo) = list.find_todo_mut(id) {
@@ -293,7 +308,7 @@ mod tests {
     #[test]
     fn test_todo_list_remove() {
         let mut list = TodoList::new();
-        let id = list.add_todo("To be removed".to_string());
+        let id = list.add_todo("To be removed".to_string(), None);
         
         assert!(list.remove_todo(id));
         assert_eq!(list.todos.len(), 0);
@@ -303,8 +318,8 @@ mod tests {
     #[test]
     fn test_todo_list_filter() {
         let mut list = TodoList::new();
-        let id1 = list.add_todo("Todo 1".to_string());
-        let _id2 = list.add_todo("Todo 2".to_string());
+        let id1 = list.add_todo("Todo 1".to_string(), None);
+        let _id2 = list.add_todo("Todo 2".to_string(), None);
         
         // Complete the first todo
         if let Some(todo) = list.find_todo_mut(id1) {
