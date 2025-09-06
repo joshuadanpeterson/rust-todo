@@ -1,6 +1,8 @@
 // src/tui/mod.rs - Terminal User Interface Module
 // This module provides an interactive terminal interface for the todo app
 
+mod theme;
+
 use std::io;
 use std::time::Duration;
 
@@ -13,14 +15,15 @@ use crossterm::{
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, ListState, Paragraph, Wrap, BorderType},
     Frame, Terminal,
 };
 
 use crate::storage::{load_todos, save_todos};
 use crate::todo::{TodoFilter, TodoList};
+use self::theme::{Theme, Icons};
 
 /// The main TUI application state
 /// 
@@ -62,6 +65,9 @@ pub struct App {
     
     /// Show help popup?
     show_help: bool,
+    
+    /// Theme for the UI
+    theme: Theme,
 }
 
 /// Input modes for the TUI
@@ -98,6 +104,7 @@ impl App {
             status_message: Some("Welcome! Press 'h' for help".to_string()),
             should_quit: false,
             show_help: false,
+            theme: Theme::modern_dark(),
         })
     }
     
@@ -208,19 +215,33 @@ impl App {
     
     /// Draw the title bar
     fn draw_title(&self, frame: &mut Frame, area: Rect) {
-        let title = format!(
-            " 📋 Rust Todo TUI - Filter: {} ",
-            match self.filter {
-                TodoFilter::All => "All",
-                TodoFilter::Completed => "Completed",
-                TodoFilter::Pending => "Pending",
-            }
-        );
+        let filter_text = match self.filter {
+            TodoFilter::All => "All Tasks",
+            TodoFilter::Completed => "Completed",
+            TodoFilter::Pending => "Pending",
+        };
         
-        let title_widget = Paragraph::new(title)
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+        let title_spans = vec![
+            Span::raw(" "),
+            Span::styled(Icons::SPARKLE, Style::default().fg(self.theme.accent)),
+            Span::raw(" "),
+            Span::styled("Rust Todo", self.theme.title_style()),
+            Span::raw(" "),
+            Span::styled("│", Style::default().fg(self.theme.bg_highlight)),
+            Span::raw(" Filter: "),
+            Span::styled(filter_text, Style::default().fg(self.theme.primary_light)),
+            Span::raw(" "),
+        ];
+        
+        let title_widget = Paragraph::new(Line::from(title_spans))
             .alignment(Alignment::Center)
-            .block(Block::default().borders(Borders::ALL));
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .border_style(Style::default().fg(self.theme.primary))
+                    .style(Style::default().bg(self.theme.bg_secondary))
+            );
         
         frame.render_widget(title_widget, area);
     }
@@ -238,44 +259,88 @@ impl App {
             })
             .collect();
         
-        // Create list items
+        // Create list items with beautiful styling
         let items: Vec<ListItem> = filtered_indices
             .iter()
             .map(|(_, todo)| {
-                let status = if todo.completed { "✅" } else { "⬜" };
-                let priority = match todo.priority {
-                    Some(1) => " 🔵",
-                    Some(2) => " 🟢",
-                    Some(3) => " 🟡",
-                    Some(4) => " 🟠",
-                    Some(5) => " 🔴",
-                    _ => "",
-                };
-                
-                let content = format!("{} [#{}] {}{}", status, todo.id, todo.description, priority);
-                
-                let style = if todo.completed {
-                    Style::default().fg(Color::Gray).add_modifier(Modifier::CROSSED_OUT)
+                let checkbox = if todo.completed {
+                    Icons::CHECKBOX_CHECKED
                 } else {
-                    Style::default().fg(Color::White)
+                    Icons::CHECKBOX_EMPTY
                 };
                 
-                ListItem::new(content).style(style)
+                // Create priority indicator with colors
+                let priority_indicator = if let Some(p) = todo.priority {
+                    let priority_icon = match p {
+                        1 => Icons::CIRCLE,
+                        2 => Icons::DIAMOND,
+                        3 => Icons::STAR_EMPTY,
+                        4 => Icons::STAR,
+                        5 => Icons::FIRE,
+                        _ => Icons::BULLET,
+                    };
+                    
+                    vec![
+                        Span::raw(" "),
+                        Span::styled(
+                            priority_icon,
+                            Style::default().fg(self.theme.priority_color(todo.priority))
+                        ),
+                    ]
+                } else {
+                    vec![]
+                };
+                
+                // Build the line with multiple styled spans
+                let mut spans = vec![
+                    Span::styled(
+                        checkbox,
+                        if todo.completed {
+                            Style::default().fg(self.theme.success)
+                        } else {
+                            Style::default().fg(self.theme.text_muted)
+                        }
+                    ),
+                    Span::raw(" "),
+                    Span::styled(
+                        format!("#{}", todo.id),
+                        Style::default().fg(self.theme.text_muted).add_modifier(Modifier::DIM)
+                    ),
+                    Span::raw(" "),
+                    Span::styled(
+                        &todo.description,
+                        if todo.completed {
+                            self.theme.completed_style()
+                        } else {
+                            Style::default().fg(self.theme.text_primary)
+                        }
+                    ),
+                ];
+                
+                // Add priority indicator if present
+                spans.extend(priority_indicator);
+                
+                ListItem::new(Line::from(spans))
             })
             .collect();
         
-        // Create list widget
+        // Create list widget with beautiful styling
+        let highlight_symbol = format!("{} ", Icons::ARROW_RIGHT);
         let list = List::new(items)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title(" Todos ")
-                .border_style(Style::default().fg(
-                    if self.input_mode == InputMode::Normal { Color::Yellow } else { Color::White }
-                )))
-            .highlight_style(Style::default()
-                .bg(Color::DarkGray)
-                .add_modifier(Modifier::BOLD))
-            .highlight_symbol(">> ");
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(vec![
+                        Span::raw(" "),
+                        Span::styled(Icons::LIGHTNING, Style::default().fg(self.theme.warning)),
+                        Span::raw(" Tasks "),
+                    ])
+                    .border_style(self.theme.border_style(self.input_mode == InputMode::Normal))
+                    .style(Style::default().bg(self.theme.bg_primary))
+            )
+            .highlight_style(self.theme.selected_style())
+            .highlight_symbol(&highlight_symbol);
         
         // Create list state
         let mut state = ListState::default();
@@ -294,24 +359,51 @@ impl App {
     
     /// Draw the input area
     fn draw_input(&self, frame: &mut Frame, area: Rect) {
-        let input_title = match self.input_mode {
-            InputMode::Normal => " Commands (press 'i' to add todo) ",
-            InputMode::Insert => " Adding Todo (use :1-5 for priority, e.g., 'Task:3' | Esc to cancel) ",
-            InputMode::Editing => " Editing Todo (press Esc to cancel) ",
-            InputMode::SettingPriority => " Set Priority: 1-5 or 0 to clear (Esc to cancel) ",
+        let (input_icon, input_title, is_active) = match self.input_mode {
+            InputMode::Normal => (
+                Icons::BULLET,
+                "Commands (press 'i' to add todo)",
+                false
+            ),
+            InputMode::Insert => (
+                Icons::ROCKET,
+                "Adding Todo (use :1-5 for priority | Esc to cancel)",
+                true
+            ),
+            InputMode::Editing => (
+                Icons::DIAMOND,
+                "Editing Todo (Esc to cancel)",
+                true
+            ),
+            InputMode::SettingPriority => (
+                Icons::STAR,
+                "Set Priority: 1-5 or 0 to clear (Esc to cancel)",
+                true
+            ),
         };
         
-        let style = match self.input_mode {
-            InputMode::Normal => Style::default().fg(Color::White),
-            InputMode::Insert | InputMode::Editing | InputMode::SettingPriority => Style::default().fg(Color::Yellow),
+        let input_style = if is_active {
+            Style::default().fg(self.theme.accent)
+        } else {
+            Style::default().fg(self.theme.text_secondary)
         };
         
         let input = Paragraph::new(self.input.as_str())
-            .style(style)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title(input_title)
-                .border_style(style));
+            .style(input_style)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded)
+                    .title(vec![
+                        Span::raw(" "),
+                        Span::styled(input_icon, Style::default().fg(self.theme.primary)),
+                        Span::raw(" "),
+                        Span::styled(input_title, Style::default().fg(self.theme.text_secondary)),
+                        Span::raw(" "),
+                    ])
+                    .border_style(self.theme.border_style(is_active))
+                    .style(Style::default().bg(self.theme.bg_secondary))
+            );
         
         frame.render_widget(input, area);
         
@@ -326,75 +418,181 @@ impl App {
     
     /// Draw the status bar
     fn draw_status_bar(&self, frame: &mut Frame, area: Rect) {
-        let mode = match self.input_mode {
-            InputMode::Normal => "NORMAL",
-            InputMode::Insert => "INSERT",
-            InputMode::Editing => "EDITING",
-            InputMode::SettingPriority => "PRIORITY",
+        let (mode_icon, mode_text) = match self.input_mode {
+            InputMode::Normal => (Icons::CIRCLE, "NORMAL"),
+            InputMode::Insert => (Icons::ROCKET, "INSERT"),
+            InputMode::Editing => (Icons::DIAMOND, "EDIT"),
+            InputMode::SettingPriority => (Icons::STAR, "PRIORITY"),
         };
         
-        let stats = format!(
-            " Mode: {} | Total: {} | Completed: {} | Pending: {} ",
-            mode,
-            self.todos.todos.len(),
-            self.todos.todos.iter().filter(|t| t.completed).count(),
-            self.todos.todos.iter().filter(|t| !t.completed).count(),
-        );
+        let total = self.todos.todos.len();
+        let completed = self.todos.todos.iter().filter(|t| t.completed).count();
+        let pending = self.todos.todos.iter().filter(|t| !t.completed).count();
         
-        let message = if let Some(msg) = &self.status_message {
-            format!(" | {} ", msg)
-        } else {
-            String::new()
-        };
+        // Build status bar with styled spans
+        let mut status_spans = vec![
+            Span::raw(" "),
+            Span::styled(mode_icon, Style::default().fg(self.theme.accent)),
+            Span::raw(" "),
+            Span::styled(mode_text, Style::default().fg(self.theme.primary_light).add_modifier(Modifier::BOLD)),
+            Span::styled(" │ ", Style::default().fg(self.theme.bg_highlight)),
+            Span::styled(Icons::CHECKBOX_EMPTY, Style::default().fg(self.theme.text_muted)),
+            Span::styled(format!(" {} Total", total), Style::default().fg(self.theme.text_secondary)),
+            Span::styled(" │ ", Style::default().fg(self.theme.bg_highlight)),
+            Span::styled(Icons::CHECKBOX_CHECKED, Style::default().fg(self.theme.success)),
+            Span::styled(format!(" {} Done", completed), Style::default().fg(self.theme.success)),
+            Span::styled(" │ ", Style::default().fg(self.theme.bg_highlight)),
+            Span::styled(Icons::CIRCLE, Style::default().fg(self.theme.warning)),
+            Span::styled(format!(" {} Pending", pending), Style::default().fg(self.theme.warning)),
+        ];
         
-        let status = Paragraph::new(format!("{}{}", stats, message))
-            .style(Style::default().fg(Color::Cyan).bg(Color::Black))
-            .alignment(Alignment::Left);
+        // Add status message if present
+        if let Some(msg) = &self.status_message {
+            status_spans.push(Span::styled(" │ ", Style::default().fg(self.theme.bg_highlight)));
+            status_spans.push(Span::styled(Icons::SPARKLE, Style::default().fg(self.theme.info)));
+            status_spans.push(Span::raw(" "));
+            status_spans.push(Span::styled(msg, Style::default().fg(self.theme.info)));
+        }
+        
+        let status = Paragraph::new(Line::from(status_spans))
+            .style(Style::default().bg(self.theme.bg_secondary))
+            .alignment(Alignment::Left)
+            .block(
+                Block::default()
+                    .borders(Borders::TOP)
+                    .border_style(Style::default().fg(self.theme.bg_highlight))
+            );
         
         frame.render_widget(status, area);
     }
     
     /// Draw help popup
     fn draw_help_popup(&self, frame: &mut Frame) {
-        let area = centered_rect(60, 80, frame.size());
+        let area = centered_rect(65, 85, frame.size());
         
         let help_text = vec![
-            Line::from(vec![Span::styled("Keyboard Shortcuts", Style::default().add_modifier(Modifier::BOLD))]),
+            Line::from(vec![
+                Span::styled(Icons::SPARKLE, Style::default().fg(self.theme.accent)),
+                Span::raw(" "),
+                Span::styled("Keyboard Shortcuts", self.theme.title_style()),
+                Span::raw(" "),
+                Span::styled(Icons::SPARKLE, Style::default().fg(self.theme.accent)),
+            ]),
             Line::from(""),
-            Line::from(vec![Span::styled("Navigation:", Style::default().add_modifier(Modifier::UNDERLINED))]),
-            Line::from("  j/↓     - Move down"),
-            Line::from("  k/↑     - Move up"),
-            Line::from("  g       - Go to top"),
-            Line::from("  G       - Go to bottom"),
+            Line::from(vec![
+                Span::styled(Icons::ARROW_RIGHT, Style::default().fg(self.theme.primary)),
+                Span::raw(" "),
+                Span::styled("Navigation", Style::default().fg(self.theme.primary_light).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("j/↓", Style::default().fg(self.theme.accent)),
+                Span::raw("     Move down"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("k/↑", Style::default().fg(self.theme.accent)),
+                Span::raw("     Move up"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("g", Style::default().fg(self.theme.accent)),
+                Span::raw("       Go to top"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("G", Style::default().fg(self.theme.accent)),
+                Span::raw("       Go to bottom"),
+            ]),
             Line::from(""),
-            Line::from(vec![Span::styled("Actions:", Style::default().add_modifier(Modifier::UNDERLINED))]),
-            Line::from("  i       - Insert new todo (add :N for priority)"),
-            Line::from("  Enter   - Complete/uncomplete todo"),
-            Line::from("  d       - Delete todo"),
-            Line::from("  e       - Edit todo description"),
-            Line::from("  p       - Set/change priority (1-5, 0 to clear)"),
+            Line::from(vec![
+                Span::styled(Icons::ARROW_RIGHT, Style::default().fg(self.theme.primary)),
+                Span::raw(" "),
+                Span::styled("Actions", Style::default().fg(self.theme.primary_light).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("i", Style::default().fg(self.theme.accent)),
+                Span::raw("       Insert new todo (add :N for priority)"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("Enter", Style::default().fg(self.theme.accent)),
+                Span::raw("   Complete/uncomplete todo"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("d", Style::default().fg(self.theme.accent)),
+                Span::raw("       Delete todo"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("e", Style::default().fg(self.theme.accent)),
+                Span::raw("       Edit todo description"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("p", Style::default().fg(self.theme.accent)),
+                Span::raw("       Set/change priority (1-5, 0 to clear)"),
+            ]),
             Line::from(""),
-            Line::from(vec![Span::styled("Filters:", Style::default().add_modifier(Modifier::UNDERLINED))]),
-            Line::from("  f       - Cycle through filters"),
-            Line::from("  1       - Show all todos"),
-            Line::from("  2       - Show completed only"),
-            Line::from("  3       - Show pending only"),
+            Line::from(vec![
+                Span::styled(Icons::ARROW_RIGHT, Style::default().fg(self.theme.primary)),
+                Span::raw(" "),
+                Span::styled("Filters", Style::default().fg(self.theme.primary_light).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("f", Style::default().fg(self.theme.accent)),
+                Span::raw("       Cycle through filters"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("1-3", Style::default().fg(self.theme.accent)),
+                Span::raw("     Quick filter selection"),
+            ]),
             Line::from(""),
-            Line::from(vec![Span::styled("Other:", Style::default().add_modifier(Modifier::UNDERLINED))]),
-            Line::from("  h/?     - Toggle this help"),
-            Line::from("  q       - Quit"),
-            Line::from("  Esc     - Cancel/close"),
+            Line::from(vec![
+                Span::styled(Icons::ARROW_RIGHT, Style::default().fg(self.theme.primary)),
+                Span::raw(" "),
+                Span::styled("Other", Style::default().fg(self.theme.primary_light).add_modifier(Modifier::BOLD)),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("h/?", Style::default().fg(self.theme.accent)),
+                Span::raw("     Toggle this help"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("q", Style::default().fg(self.theme.accent)),
+                Span::raw("       Save and quit"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("Esc", Style::default().fg(self.theme.accent)),
+                Span::raw("     Cancel/close"),
+            ]),
         ];
         
         let help = Paragraph::new(help_text)
-            .block(Block::default()
-                .title(" Help ")
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(Color::Yellow)))
+            .block(
+                Block::default()
+                    .title(vec![
+                        Span::raw(" "),
+                        Span::styled(Icons::LIGHTNING, Style::default().fg(self.theme.warning)),
+                        Span::raw(" Help "),
+                        Span::styled(Icons::LIGHTNING, Style::default().fg(self.theme.warning)),
+                        Span::raw(" "),
+                    ])
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Double)
+                    .border_style(Style::default().fg(self.theme.primary))
+                    .style(Style::default().bg(self.theme.bg_primary))
+            )
             .wrap(Wrap { trim: true })
-            .style(Style::default().fg(Color::White));
+            .style(Style::default().fg(self.theme.text_primary));
         
-        // Clear the area and render help
+        // Clear the area and render help with background
         frame.render_widget(Clear, area);
         frame.render_widget(help, area);
     }
