@@ -78,6 +78,8 @@ enum InputMode {
     Insert,
     /// Editing existing todo
     Editing,
+    /// Setting priority for a todo
+    SettingPriority,
 }
 
 impl App {
@@ -151,6 +153,7 @@ impl App {
                         InputMode::Normal => self.handle_normal_mode(key)?,
                         InputMode::Insert => self.handle_insert_mode(key)?,
                         InputMode::Editing => self.handle_editing_mode(key)?,
+                        InputMode::SettingPriority => self.handle_priority_mode(key)?,
                     }
                 }
             }
@@ -293,13 +296,14 @@ impl App {
     fn draw_input(&self, frame: &mut Frame, area: Rect) {
         let input_title = match self.input_mode {
             InputMode::Normal => " Commands (press 'i' to add todo) ",
-            InputMode::Insert => " Adding Todo (press Esc to cancel) ",
+            InputMode::Insert => " Adding Todo (use :1-5 for priority, e.g., 'Task:3' | Esc to cancel) ",
             InputMode::Editing => " Editing Todo (press Esc to cancel) ",
+            InputMode::SettingPriority => " Set Priority: 1-5 or 0 to clear (Esc to cancel) ",
         };
         
         let style = match self.input_mode {
             InputMode::Normal => Style::default().fg(Color::White),
-            InputMode::Insert | InputMode::Editing => Style::default().fg(Color::Yellow),
+            InputMode::Insert | InputMode::Editing | InputMode::SettingPriority => Style::default().fg(Color::Yellow),
         };
         
         let input = Paragraph::new(self.input.as_str())
@@ -326,6 +330,7 @@ impl App {
             InputMode::Normal => "NORMAL",
             InputMode::Insert => "INSERT",
             InputMode::Editing => "EDITING",
+            InputMode::SettingPriority => "PRIORITY",
         };
         
         let stats = format!(
@@ -363,11 +368,11 @@ impl App {
             Line::from("  G       - Go to bottom"),
             Line::from(""),
             Line::from(vec![Span::styled("Actions:", Style::default().add_modifier(Modifier::UNDERLINED))]),
-            Line::from("  i       - Insert new todo"),
+            Line::from("  i       - Insert new todo (add :N for priority)"),
             Line::from("  Enter   - Complete/uncomplete todo"),
             Line::from("  d       - Delete todo"),
-            Line::from("  e       - Edit todo"),
-            Line::from("  p       - Set priority (1-5)"),
+            Line::from("  e       - Edit todo description"),
+            Line::from("  p       - Set/change priority (1-5, 0 to clear)"),
             Line::from(""),
             Line::from(vec![Span::styled("Filters:", Style::default().add_modifier(Modifier::UNDERLINED))]),
             Line::from("  f       - Cycle through filters"),
@@ -443,9 +448,33 @@ impl App {
         match key.code {
             KeyCode::Enter => {
                 if !self.input.trim().is_empty() {
-                    self.todos.add_todo(self.input.clone(), None);
+                    // Check if input contains priority suffix like :1 or :5
+                    let (description, priority) = if let Some(pos) = self.input.rfind(':') {
+                        let desc = self.input[..pos].trim();
+                        let priority_str = self.input[pos + 1..].trim();
+                        if let Ok(p) = priority_str.parse::<u8>() {
+                            if p >= 1 && p <= 5 {
+                                (desc.to_string(), Some(p))
+                            } else {
+                                (self.input.clone(), None)
+                            }
+                        } else {
+                            (self.input.clone(), None)
+                        }
+                    } else {
+                        (self.input.clone(), None)
+                    };
+                    
+                    self.todos.add_todo(description.clone(), priority);
                     save_todos(&self.todos)?;
-                    self.status_message = Some(format!("Added: {}", self.input));
+                    
+                    let msg = if let Some(p) = priority {
+                        format!("Added: {} (priority {})", description, p)
+                    } else {
+                        format!("Added: {}", description)
+                    };
+                    self.status_message = Some(msg);
+                    
                     self.input.clear();
                     self.cursor_position = 0;
                     self.input_mode = InputMode::Normal;
@@ -512,6 +541,59 @@ impl App {
             _ => {
                 // Reuse insert mode handling for text input
                 self.handle_insert_mode(key)?;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Handle priority setting mode key events
+    /// 
+    /// # Key Concepts:
+    /// - Direct numeric input for priority
+    /// - Immediate feedback on valid/invalid input
+    /// - Simple mode for single-key actions
+    fn handle_priority_mode(&mut self, key: event::KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Char('0') => {
+                // Clear priority
+                if let Some(idx) = self.selected_index {
+                    if idx < self.todos.todos.len() {
+                        self.todos.todos[idx].priority = None;
+                        save_todos(&self.todos)?;
+                        self.status_message = Some("Priority cleared".to_string());
+                    }
+                }
+                self.input_mode = InputMode::Normal;
+            }
+            KeyCode::Char(c) if c >= '1' && c <= '5' => {
+                // Set priority 1-5
+                let priority = c.to_digit(10).unwrap() as u8;
+                if let Some(idx) = self.selected_index {
+                    if idx < self.todos.todos.len() {
+                        self.todos.todos[idx].priority = Some(priority);
+                        save_todos(&self.todos)?;
+                        let priority_name = match priority {
+                            1 => "Low",
+                            2 => "Normal",
+                            3 => "Medium",
+                            4 => "High",
+                            5 => "Critical",
+                            _ => "Unknown",
+                        };
+                        self.status_message = Some(format!("Priority set to {} ({})", priority, priority_name));
+                    }
+                }
+                self.input_mode = InputMode::Normal;
+            }
+            KeyCode::Esc => {
+                // Cancel priority setting
+                self.input_mode = InputMode::Normal;
+                self.status_message = Some("Priority change cancelled".to_string());
+            }
+            _ => {
+                // Invalid input
+                self.status_message = Some("Invalid priority. Press 1-5 to set, 0 to clear, Esc to cancel".to_string());
             }
         }
         
@@ -618,8 +700,12 @@ impl App {
     
     /// Prompt for priority setting
     fn prompt_priority(&mut self) -> Result<()> {
-        self.status_message = Some("Press 1-5 to set priority, 0 to clear".to_string());
-        // Note: Priority handling would be in the next key event
+        if self.selected_index.is_some() {
+            self.input_mode = InputMode::SettingPriority;
+            self.status_message = Some("Enter priority (1-5) or 0 to clear".to_string());
+        } else {
+            self.status_message = Some("No todo selected".to_string());
+        }
         Ok(())
     }
 }
