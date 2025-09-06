@@ -13,6 +13,7 @@ use tracing_subscriber::{EnvFilter, fmt};
 use tracing::{info, error};
 
 use cli::parse_args;
+use cli::Commands;
 use handlers::handle_command;
 
 /// Main entry point of the application
@@ -38,7 +39,7 @@ fn main() -> Result<()> {
     let cli = parse_args();
     
     // Check if we're running TUI mode
-    let is_tui = matches!(cli.command, cli::Command::Tui);
+    let is_tui = matches!(cli.command, Commands::Tui);
     
     // Only initialize logging for non-TUI modes
     if !is_tui {
