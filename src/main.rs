@@ -5,6 +5,7 @@ pub mod todo;
 pub mod storage;
 pub mod cli;
 pub mod handlers;
+pub mod tui;
 
 // Import necessary items
 use anyhow::Result;

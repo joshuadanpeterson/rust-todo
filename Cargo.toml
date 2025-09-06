@@ -35,3 +35,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 # Chrono - Date and time library
 # Used to add timestamps to our todos
 chrono = { version = "0.4", features = ["serde"] }
+
+# Ratatui - Terminal User Interface library
+# Modern, easy-to-use TUI framework (fork of tui-rs)
+ratatui = "0.26"
+
+# Crossterm - Cross-platform terminal manipulation
+# Handles keyboard input, cursor control, and terminal modes
+crossterm = "0.27"

@@ -7,6 +7,7 @@ use tracing::{info, debug, warn};
 use crate::cli::{Commands, FilterArg, ExportFormat, get_confirmation, format_priority};
 use crate::storage::{load_todos, save_todos, ensure_storage_exists};
 use crate::todo::{TodoList, TodoFilter};
+use crate::tui;
 
 /// Handles the execution of CLI commands
 /// 
@@ -55,6 +56,9 @@ pub fn handle_command(command: Commands) -> Result<()> {
         }
         Commands::Import { file, merge } => {
             handle_import(file, merge)
+        }
+        Commands::Tui => {
+            handle_tui()
         }
     }
 }
@@ -170,6 +174,25 @@ fn handle_list(filter: Option<FilterArg>, detailed: bool) -> Result<()> {
     println!("Total: {} | Completed: {} | Pending: {}",
              total, completed, total - completed);
     
+    Ok(())
+}
+
+/// Handles launching the TUI
+/// 
+/// # Key Concepts:
+/// 
+/// ## Mode Switching
+/// - CLI and TUI are different interfaces to same data
+/// - TUI takes over terminal until user quits
+/// - Returns to normal terminal after exit
+fn handle_tui() -> Result<()> {
+    debug!("Launching TUI mode");
+    
+    // Create and run TUI app
+    let mut app = tui::App::new()?;
+    app.run()?;
+    
+    info!("TUI mode exited");
     Ok(())
 }
 

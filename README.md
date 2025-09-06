@@ -12,6 +12,7 @@ A command-line todo application built in Rust as a learning project. This projec
 - 🎨 Colorful terminal output
 - 📝 Comprehensive error handling
 - 🧪 Full test coverage
+- 🖥️ **NEW: Interactive TUI mode with vim-style navigation**
 
 ## Installation
 
@@ -70,6 +71,20 @@ rust-todo delete 1
 rust-todo --help
 rust-todo <command> --help
 ```
+
+### Interactive TUI Mode 🖥️
+```bash
+# Launch the interactive terminal UI
+rust-todo tui
+# or
+rust-todo interactive
+```
+
+#### TUI Keyboard Shortcuts:
+- **Navigation**: `j/↓` (down), `k/↑` (up), `g` (top), `G` (bottom)
+- **Actions**: `i` (add todo), `Enter` (toggle complete), `d` (delete), `e` (edit)
+- **Filters**: `f` (cycle filters), `1/2/3` (all/completed/pending)
+- **Other**: `h` (help), `q` (quit), `Esc` (cancel)
 
 ## Project Structure
 

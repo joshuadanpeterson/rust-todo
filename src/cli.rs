@@ -199,6 +199,16 @@ pub enum Commands {
         #[arg(short, long)]
         merge: bool,
     },
+    
+    /// Launch interactive TUI mode
+    /// 
+    /// # Example:
+    /// ```
+    /// rust-todo tui
+    /// rust-todo interactive
+    /// ```
+    #[command(alias = "interactive")]
+    Tui,
 }
 
 /// Filter arguments for the list command
