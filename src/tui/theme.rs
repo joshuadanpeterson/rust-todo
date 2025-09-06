@@ -67,12 +67,12 @@ impl Theme {
             error: Color::Rgb(239, 68, 68),           // Red
             info: Color::Rgb(59, 130, 246),           // Blue
             
-            // Priority gradient (cool to warm)
-            priority_lowest: Color::Rgb(96, 165, 250),   // Light blue
-            priority_low: Color::Rgb(52, 211, 153),      // Teal
-            priority_medium: Color::Rgb(251, 191, 36),   // Yellow
-            priority_high: Color::Rgb(251, 146, 60),     // Orange
-            priority_highest: Color::Rgb(239, 68, 68),   // Red
+            // Priority gradient (cool to warm) - more vibrant colors
+            priority_lowest: Color::Rgb(59, 130, 246),    // Bright blue
+            priority_low: Color::Rgb(34, 197, 94),        // Bright green  
+            priority_medium: Color::Rgb(250, 204, 21),    // Bright yellow
+            priority_high: Color::Rgb(251, 146, 60),      // Bright orange
+            priority_highest: Color::Rgb(239, 68, 68),    // Bright red
         }
     }
     
@@ -269,7 +269,7 @@ impl Icons {
     
     // Additional modern icons
     pub const DOT: &'static str = "∙";               // Bullet operator
-    pub const HEAVY_DOT: &'static str = "⬤";         // Black large circle
+    pub const HEAVY_DOT: &'static str = "●";         // Black circle (more visible)
     pub const SQUARE: &'static str = "■";            // Black square
     pub const SQUARE_EMPTY: &'static str = "□";      // White square
     pub const PLUS: &'static str = "➕";              // Heavy plus

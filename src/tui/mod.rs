@@ -269,22 +269,32 @@ impl App {
                     Icons::CHECKBOX_EMPTY
                 };
                 
-                // Create priority indicator with colors
+                // Create priority indicator with colored squares for maximum visibility
                 let priority_indicator = if let Some(p) = todo.priority {
-                    let priority_icon = match p {
-                        1 => Icons::CIRCLE,
-                        2 => Icons::DIAMOND,
-                        3 => Icons::STAR_EMPTY,
-                        4 => Icons::STAR,
-                        5 => Icons::FIRE,
-                        _ => Icons::BULLET,
+                    // Use filled squares with vibrant colors for each priority level
+                    let priority_icon = Icons::SQUARE;  // Filled square for all priorities
+                    let priority_label = match p {
+                        1 => "[1]",
+                        2 => "[2]",
+                        3 => "[3]",
+                        4 => "[4]",
+                        5 => "[5]",
+                        _ => "",
                     };
                     
                     vec![
                         Span::raw(" "),
                         Span::styled(
                             priority_icon,
-                            Style::default().fg(self.theme.priority_color(todo.priority))
+                            Style::default()
+                                .fg(self.theme.priority_color(todo.priority))
+                                .add_modifier(Modifier::BOLD)
+                        ),
+                        Span::styled(
+                            priority_label,
+                            Style::default()
+                                .fg(self.theme.text_muted)
+                                .add_modifier(Modifier::DIM)
                         ),
                     ]
                 } else {
