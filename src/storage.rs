@@ -144,6 +144,7 @@ pub fn ensure_storage_exists() -> Result<()> {
 /// - We use if let Ok() to ignore errors when file doesn't exist
 /// - This is intentional - deleting a non-existent file is success
 /// - Alternative would be match with explicit error handling
+#[allow(dead_code)] // Kept for potential future use (reset command, testing)
 pub fn delete_storage() -> Result<()> {
     let path = Path::new(STORAGE_FILE);
     
@@ -167,6 +168,7 @@ pub fn delete_storage() -> Result<()> {
 /// - File metadata includes size, permissions, timestamps
 /// - Accessing metadata doesn't require opening the file
 /// - More efficient than reading the file to check size
+#[allow(dead_code)] // Useful for debugging and potential stats command enhancement
 pub fn get_storage_info() -> Option<StorageInfo> {
     let path = Path::new(STORAGE_FILE);
     
@@ -187,6 +189,7 @@ pub fn get_storage_info() -> Option<StorageInfo> {
 
 /// Information about the storage file
 #[derive(Debug)]
+#[allow(dead_code)] // Kept for future storage statistics features
 pub struct StorageInfo {
     /// Size of the file in bytes
     pub file_size: u64,

@@ -97,16 +97,6 @@ impl Todo {
         self.completed = true;
         self.completed_at = Some(Utc::now());
     }
-    
-    /// Checks if the todo is complete
-    /// 
-    /// # Key Concepts:
-    /// - `&self`: Immutable reference to self
-    /// - We only need to read, not modify, so no 'mut' needed
-    /// - This method doesn't consume or modify the Todo
-    pub fn is_completed(&self) -> bool {
-        self.completed
-    }
 }
 
 /// A collection of todos
