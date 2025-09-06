@@ -214,7 +214,7 @@ pub enum Commands {
 /// - This enum maps to our TodoFilter enum
 /// - Separation of concerns: CLI types vs domain types
 /// - Allows for different representations
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum FilterArg {
     /// Show all todos
     All,
@@ -241,7 +241,7 @@ impl From<FilterArg> for TodoFilter {
 /// # Key Concepts:
 /// - Extensible design: easy to add new formats
 /// - Each format has its own serialization logic
-#[derive(Copy, Clone, PartialEq, Eq, ValueEnum)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, ValueEnum)]
 pub enum ExportFormat {
     /// JSON format (default)
     Json,
