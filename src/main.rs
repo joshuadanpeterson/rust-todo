@@ -1,9 +1,10 @@
 // Module declarations
 // These tell Rust to include these files as part of our program
-mod todo;
-mod storage;
-mod cli;
-mod handlers;
+// pub makes them accessible to integration tests
+pub mod todo;
+pub mod storage;
+pub mod cli;
+pub mod handlers;
 
 // Import necessary items
 use anyhow::Result;
