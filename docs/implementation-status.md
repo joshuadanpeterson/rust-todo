@@ -16,21 +16,21 @@ This document tracks the implementation progress of the Rust Todo App learning p
 |----|--------|------|---------|-----------|----------|--------------|-------|
 | ISL-001 | 🟢 DONE | Project initialization | 2025-01-05 | 2025-01-05 | HIGH | - | Cargo project created, git initialized |
 | ISL-002 | 🟢 DONE | Documentation structure | 2025-01-05 | 2025-01-05 | HIGH | ISL-001 | WARP.md, README.md created |
-| ISL-003 | 🔴 TODO | Add project dependencies | - | - | HIGH | ISL-002 | Clap, Serde, Anyhow, Tracing |
-| ISL-004 | 🔴 TODO | Create Todo data model | - | - | HIGH | ISL-003 | Struct with serialization |
-| ISL-005 | 🔴 TODO | Implement storage module | - | - | HIGH | ISL-004 | JSON file persistence |
-| ISL-006 | 🔴 TODO | Create CLI structure | - | - | HIGH | ISL-003 | Command definitions with Clap |
-| ISL-007 | 🔴 TODO | Implement handlers module | - | - | HIGH | ISL-006 | Command business logic |
-| ISL-008 | 🔴 TODO | Add command implementation | - | - | MEDIUM | ISL-007 | Add new todos |
-| ISL-009 | 🔴 TODO | List command implementation | - | - | MEDIUM | ISL-007 | Display todos with filters |
-| ISL-010 | 🔴 TODO | Complete command implementation | - | - | MEDIUM | ISL-007 | Mark todos as done |
-| ISL-011 | 🔴 TODO | Delete command implementation | - | - | MEDIUM | ISL-007 | Remove todos |
-| ISL-012 | 🔴 TODO | Main application logic | - | - | HIGH | ISL-007 | Wire everything together |
-| ISL-013 | 🔴 TODO | Unit tests | - | - | MEDIUM | ISL-012 | Test individual modules |
-| ISL-014 | 🔴 TODO | Integration tests | - | - | MEDIUM | ISL-012 | End-to-end testing |
-| ISL-015 | 🔴 TODO | Error handling improvements | - | - | LOW | ISL-012 | Graceful error messages |
-| ISL-016 | 🔴 TODO | Logging implementation | - | - | LOW | ISL-012 | Debug and info logging |
-| ISL-017 | 🔴 TODO | Documentation finalization | - | - | LOW | ISL-014 | Update all docs |
+| ISL-003 | 🟢 DONE | Add project dependencies | 2025-01-06 | 2025-01-06 | HIGH | ISL-002 | Clap, Serde, Anyhow, Tracing |
+| ISL-004 | 🟢 DONE | Create Todo data model | 2025-01-06 | 2025-01-06 | HIGH | ISL-003 | Struct with serialization |
+| ISL-005 | 🟢 DONE | Implement storage module | 2025-01-06 | 2025-01-06 | HIGH | ISL-004 | JSON file persistence |
+| ISL-006 | 🟢 DONE | Create CLI structure | 2025-01-06 | 2025-01-06 | HIGH | ISL-003 | Command definitions with Clap |
+| ISL-007 | 🟢 DONE | Implement handlers module | 2025-01-06 | 2025-01-06 | HIGH | ISL-006 | Command business logic |
+| ISL-008 | 🟢 DONE | Add command implementation | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-007 | Add new todos with priority |
+| ISL-009 | 🟢 DONE | List command implementation | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-007 | Display todos with filters |
+| ISL-010 | 🟢 DONE | Complete command implementation | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-007 | Mark todos as done |
+| ISL-011 | 🟢 DONE | Delete command implementation | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-007 | Remove todos with confirmation |
+| ISL-012 | 🟢 DONE | Main application logic | 2025-01-06 | 2025-01-06 | HIGH | ISL-007 | Wire everything together |
+| ISL-013 | 🟢 DONE | Unit tests | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-012 | 16 unit tests across modules |
+| ISL-014 | 🟢 DONE | Integration tests | 2025-01-06 | 2025-01-06 | MEDIUM | ISL-012 | 9 end-to-end tests |
+| ISL-015 | 🟢 DONE | Error handling improvements | 2025-01-06 | 2025-01-06 | LOW | ISL-012 | Context-rich error messages |
+| ISL-016 | 🟢 DONE | Logging implementation | 2025-01-06 | 2025-01-06 | LOW | ISL-012 | Tracing with env filter |
+| ISL-017 | 🟡 IN PROGRESS | Documentation finalization | 2025-01-06 | - | LOW | ISL-014 | Updating docs |
 | ISL-018 | 🔴 TODO | GitHub repository creation | - | - | LOW | ISL-017 | Push to remote |
 
 ## Current Sprint Focus
