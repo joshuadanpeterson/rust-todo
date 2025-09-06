@@ -34,35 +34,43 @@ use handlers::handle_command;
 /// - tracing for debugging/monitoring
 /// - Controlled by RUST_LOG environment variable
 fn main() -> Result<()> {
-    // Initialize the tracing subscriber for logging
-    // This sets up structured logging throughout the application
-    init_tracing();
-    
-    // Log application start
-    info!("Starting rust-todo application");
-    
-    // Parse command-line arguments
-    // This will exit with help/error if arguments are invalid
+    // Parse command-line arguments first to check if we're in TUI mode
     let cli = parse_args();
     
-    // Enable debug logging if verbose flag is set
-    if cli.verbose {
-        tracing::subscriber::set_global_default(
-            fmt::Subscriber::builder()
-                .with_env_filter(EnvFilter::new("debug"))
-                .finish()
-        ).expect("Failed to set verbose logging");
-        info!("Verbose mode enabled");
+    // Check if we're running TUI mode
+    let is_tui = matches!(cli.command, cli::Command::Tui);
+    
+    // Only initialize logging for non-TUI modes
+    if !is_tui {
+        // Initialize the tracing subscriber for logging
+        init_tracing();
+        
+        // Log application start
+        info!("Starting rust-todo application");
+        
+        // Enable debug logging if verbose flag is set
+        if cli.verbose {
+            tracing::subscriber::set_global_default(
+                fmt::Subscriber::builder()
+                    .with_env_filter(EnvFilter::new("debug"))
+                    .finish()
+            ).expect("Failed to set verbose logging");
+            info!("Verbose mode enabled");
+        }
     }
     
     // Handle the command
     // Errors will bubble up and be displayed
     match handle_command(cli.command) {
         Ok(()) => {
-            info!("Command completed successfully");
+            if !is_tui {
+                info!("Command completed successfully");
+            }
         }
         Err(e) => {
-            error!("Command failed: {:?}", e);
+            if !is_tui {
+                error!("Command failed: {:?}", e);
+            }
             // Re-throw the error so main returns it
             return Err(e);
         }

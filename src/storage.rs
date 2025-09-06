@@ -57,7 +57,7 @@ pub fn save_todos(todos: &TodoList) -> Result<()> {
     fs::write(STORAGE_FILE, json)
         .context("Failed to write todos to file")?;
     
-    info!("Successfully saved {} todos", todos.todos.len());
+    debug!("Successfully saved {} todos", todos.todos.len());
     
     // Return Ok with unit type ()
     // () is Rust's unit type, similar to void in other languages
@@ -90,7 +90,7 @@ pub fn load_todos() -> Result<TodoList> {
     // Check if the file exists
     // If not, return an empty TodoList (not an error)
     if !path.exists() {
-        info!("No existing todo file found, starting with empty list");
+        debug!("No existing todo file found, starting with empty list");
         return Ok(TodoList::new());
     }
     
@@ -109,7 +109,7 @@ pub fn load_todos() -> Result<TodoList> {
     let todos: TodoList = serde_json::from_str(&contents)
         .context("Failed to parse todo JSON")?;
     
-    info!("Successfully loaded {} todos", todos.todos.len());
+    debug!("Successfully loaded {} todos", todos.todos.len());
     
     Ok(todos)
 }

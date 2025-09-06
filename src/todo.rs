@@ -31,10 +31,14 @@ pub struct Todo {
     /// In a real app, you might use UUID
     pub id: u32,
     
-    /// The todo description/title
+    /// The todo title (short summary)
     /// String is owned by this Todo instance
     /// When the Todo is dropped, the String is freed
     pub description: String,
+    
+    /// Detailed description/notes for the todo
+    /// Optional - not all todos need detailed descriptions
+    pub details: Option<String>,
     
     /// Whether the todo has been completed
     /// bool is a primitive type (true/false)
@@ -51,6 +55,10 @@ pub struct Todo {
     /// - None: No value present
     /// This prevents null pointer errors at compile time!
     pub completed_at: Option<DateTime<Utc>>,
+    
+    /// Due date for the todo
+    /// Optional - not all todos have due dates
+    pub due_date: Option<DateTime<Utc>>,
     
     /// Priority level (1-5, where 5 is highest)
     /// Optional field - not all todos need priorities
@@ -79,9 +87,31 @@ impl Todo {
             id,
             // Field init shorthand: when variable name matches field name
             description,
+            details: None,      // No detailed description initially
             completed: false,
             created_at: Utc::now(),
             completed_at: None, // No completion time initially
+            due_date: None,     // No due date initially
+            priority,
+        }
+    }
+    
+    /// Creates a new Todo with all fields
+    pub fn new_with_details(
+        id: u32,
+        description: String,
+        details: Option<String>,
+        due_date: Option<DateTime<Utc>>,
+        priority: Option<u8>,
+    ) -> Self {
+        Self {
+            id,
+            description,
+            details,
+            completed: false,
+            created_at: Utc::now(),
+            completed_at: None,
+            due_date,
             priority,
         }
     }
@@ -96,6 +126,49 @@ impl Todo {
     pub fn complete(&mut self) {
         self.completed = true;
         self.completed_at = Some(Utc::now());
+    }
+    
+    /// Checks if the todo is overdue
+    pub fn is_overdue(&self) -> bool {
+        if self.completed {
+            return false;
+        }
+        
+        if let Some(due) = self.due_date {
+            due < Utc::now()
+        } else {
+            false
+        }
+    }
+    
+    /// Checks if the todo is due soon (within 24 hours)
+    pub fn is_due_soon(&self) -> bool {
+        if self.completed || self.is_overdue() {
+            return false;
+        }
+        
+        if let Some(due) = self.due_date {
+            let hours_until_due = (due - Utc::now()).num_hours();
+            hours_until_due >= 0 && hours_until_due <= 24
+        } else {
+            false
+        }
+    }
+    
+    /// Gets a formatted due date string
+    pub fn format_due_date(&self) -> Option<String> {
+        self.due_date.map(|date| {
+            let today = Utc::now().date_naive();
+            let due_date = date.date_naive();
+            
+            if due_date == today {
+                "Today".to_string()
+            } else if due_date == today.succ_opt().unwrap() {
+                "Tomorrow".to_string()
+            } else {
+                date.format("%b %d").to_string()
+            }
+        })
     }
 }
 

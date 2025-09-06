@@ -4,6 +4,7 @@
 use ratatui::style::{Color, Modifier, Style};
 
 /// Modern color palette inspired by popular themes
+#[allow(dead_code)]
 pub struct Theme {
     // Primary colors
     pub primary: Color,
@@ -279,4 +280,5 @@ impl Icons {
     pub const HEART: &'static str = "♥";             // Black heart
     pub const ARROW_UP: &'static str = "↑";          // Up arrow
     pub const ARROW_DOWN: &'static str = "↓";        // Down arrow
+    pub const CLOCK: &'static str = "⏰";             // Alarm clock for due dates
 }

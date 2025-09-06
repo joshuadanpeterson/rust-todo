@@ -68,6 +68,9 @@ pub struct App {
     
     /// Theme for the UI
     theme: Theme,
+    
+    /// Show detailed descriptions
+    show_details: bool,
 }
 
 /// Input modes for the TUI
@@ -105,6 +108,7 @@ impl App {
             should_quit: false,
             show_help: false,
             theme: Theme::modern_dark(),
+            show_details: false,
         })
     }
     
@@ -330,7 +334,47 @@ impl App {
                 // Add priority indicator if present
                 spans.extend(priority_indicator);
                 
-                ListItem::new(Line::from(spans))
+                // Add due date if present
+                if let Some(due_str) = todo.format_due_date() {
+                    let due_color = if todo.is_overdue() {
+                        self.theme.error
+                    } else if todo.is_due_soon() {
+                        self.theme.warning
+                    } else {
+                        self.theme.text_muted
+                    };
+                    
+                    spans.push(Span::raw(" "));
+                    spans.push(Span::styled(
+                        Icons::CLOCK,
+                        Style::default().fg(due_color)
+                    ));
+                    spans.push(Span::raw(" "));
+                    spans.push(Span::styled(
+                        due_str,
+                        Style::default().fg(due_color)
+                    ));
+                }
+                
+                // Create main line
+                let mut lines = vec![Line::from(spans)];
+                
+                // Add details if enabled and present
+                if self.show_details {
+                    if let Some(ref details) = todo.details {
+                        lines.push(Line::from(vec![
+                            Span::raw("    "),
+                            Span::styled(
+                                details,
+                                Style::default()
+                                    .fg(self.theme.text_secondary)
+                                    .add_modifier(Modifier::ITALIC)
+                            ),
+                        ]));
+                    }
+                }
+                
+                ListItem::new(lines)
             })
             .collect();
         
@@ -545,6 +589,11 @@ impl App {
                 Span::styled("p", Style::default().fg(self.theme.accent)),
                 Span::raw("       Set/change priority (1-5, 0 to clear)"),
             ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("v", Style::default().fg(self.theme.accent)),
+                Span::raw("       Toggle detail view"),
+            ]),
             Line::from(""),
             Line::from(vec![
                 Span::styled(Icons::ARROW_RIGHT, Style::default().fg(self.theme.primary)),
@@ -635,6 +684,18 @@ impl App {
             
             // Priority
             KeyCode::Char('p') => self.prompt_priority()?,
+            
+            // View details toggle
+            KeyCode::Char('v') => {
+                self.show_details = !self.show_details;
+                self.status_message = Some(
+                    if self.show_details {
+                        "Showing detailed descriptions".to_string()
+                    } else {
+                        "Hiding detailed descriptions".to_string()
+                    }
+                );
+            }
             
             // Help
             KeyCode::Char('h') | KeyCode::Char('?') => self.show_help = !self.show_help,

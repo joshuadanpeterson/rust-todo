@@ -186,13 +186,14 @@ fn handle_list(filter: Option<FilterArg>, detailed: bool) -> Result<()> {
 /// - TUI takes over terminal until user quits
 /// - Returns to normal terminal after exit
 fn handle_tui() -> Result<()> {
-    debug!("Launching TUI mode");
+    // Don't log in TUI mode as it interferes with the display
+    // The TUI takes over the entire terminal
     
     // Create and run TUI app
     let mut app = tui::App::new()?;
     app.run()?;
     
-    info!("TUI mode exited");
+    // Don't log after TUI exits to prevent overwriting the terminal
     Ok(())
 }
 
