@@ -425,7 +425,7 @@ impl App {
                 "Adding Todo (use :1-5 for priority | Esc to cancel)",
                 true,
             ),
-            InputMode::Editing => (Icons::DIAMOND, "Editing Todo (Esc to cancel)", true),
+            InputMode::Editing => (Icons::DIAMOND, "Editing Todo Title (Esc to cancel)", true),
             InputMode::SettingPriority => (
                 Icons::STAR,
                 "Set Priority: 1-5 or 0 to clear (Esc to cancel)",
@@ -612,7 +612,7 @@ impl App {
             Line::from(vec![
                 Span::raw("    "),
                 Span::styled("e", Style::default().fg(self.theme.accent)),
-                Span::raw("       Edit todo description"),
+                Span::raw("       Edit todo title"),
             ]),
             Line::from(vec![
                 Span::raw("    "),
@@ -832,7 +832,7 @@ impl App {
                     if idx < self.todos.todos.len() {
                         self.todos.todos[idx].description = self.input.clone();
                         save_todos(&self.todos)?;
-                        self.status_message = Some("Todo updated".to_string());
+                        self.status_message = Some("Todo title updated".to_string());
                     }
                 }
                 self.input.clear();
@@ -992,7 +992,7 @@ impl App {
                 self.input = self.todos.todos[idx].description.clone();
                 self.cursor_position = self.input.len();
                 self.input_mode = InputMode::Editing;
-                self.status_message = Some("Editing todo".to_string());
+                self.status_message = Some("Editing todo title".to_string());
             }
         }
         Ok(())
