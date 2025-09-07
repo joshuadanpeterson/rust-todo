@@ -85,8 +85,12 @@ enum InputMode {
     Normal,
     /// Insert mode - typing new todo
     Insert,
-    /// Editing existing todo
+    /// Editing existing todo title
     Editing,
+    /// Editing todo details/notes
+    EditingDetails,
+    /// Editing due date for a todo
+    EditingDueDate,
     /// Setting priority for a todo
     SettingPriority,
 }
@@ -168,6 +172,8 @@ impl App {
                         InputMode::Normal => self.handle_normal_mode(key)?,
                         InputMode::Insert => self.handle_insert_mode(key)?,
                         InputMode::Editing => self.handle_editing_mode(key)?,
+                        InputMode::EditingDetails => self.handle_editing_details_mode(key)?,
+                        InputMode::EditingDueDate => self.handle_due_date_mode(key)?,
                         InputMode::SettingPriority => self.handle_priority_mode(key)?,
                     }
                 }
@@ -426,6 +432,16 @@ impl App {
                 true,
             ),
             InputMode::Editing => (Icons::DIAMOND, "Editing Todo Title (Esc to cancel)", true),
+            InputMode::EditingDetails => (
+                Icons::BULLET,
+                "Editing Todo Details/Notes (Esc to cancel)",
+                true,
+            ),
+            InputMode::EditingDueDate => (
+                Icons::CLOCK,
+                "Set Due Date: today, tomorrow, or YYYY-MM-DD (Esc to cancel)",
+                true,
+            ),
             InputMode::SettingPriority => (
                 Icons::STAR,
                 "Set Priority: 1-5 or 0 to clear (Esc to cancel)",
@@ -458,8 +474,12 @@ impl App {
 
         frame.render_widget(input, area);
 
-        // Show cursor when in insert mode
-        if self.input_mode == InputMode::Insert || self.input_mode == InputMode::Editing {
+        // Show cursor when in text input modes
+        if self.input_mode == InputMode::Insert 
+            || self.input_mode == InputMode::Editing 
+            || self.input_mode == InputMode::EditingDetails
+            || self.input_mode == InputMode::EditingDueDate 
+        {
             frame.set_cursor(area.x + self.cursor_position as u16 + 1, area.y + 1);
         }
     }
@@ -470,6 +490,8 @@ impl App {
             InputMode::Normal => (Icons::CIRCLE, "NORMAL"),
             InputMode::Insert => (Icons::ROCKET, "INSERT"),
             InputMode::Editing => (Icons::DIAMOND, "EDIT"),
+            InputMode::EditingDetails => (Icons::BULLET, "DETAILS"),
+            InputMode::EditingDueDate => (Icons::CLOCK, "DUE DATE"),
             InputMode::SettingPriority => (Icons::STAR, "PRIORITY"),
         };
 
@@ -616,6 +638,16 @@ impl App {
             ]),
             Line::from(vec![
                 Span::raw("    "),
+                Span::styled("D", Style::default().fg(self.theme.accent)),
+                Span::raw("       Edit details/notes"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("u", Style::default().fg(self.theme.accent)),
+                Span::raw("       Set/edit due date"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
                 Span::styled("p", Style::default().fg(self.theme.accent)),
                 Span::raw("       Set/change priority (1-5, 0 to clear)"),
             ]),
@@ -715,6 +747,8 @@ impl App {
             KeyCode::Enter => self.toggle_complete()?,
             KeyCode::Char('d') => self.delete_selected()?,
             KeyCode::Char('e') => self.start_editing()?,
+            KeyCode::Char('D') => self.start_editing_details()?,
+            KeyCode::Char('u') => self.prompt_due_date()?,
 
             // Filters
             KeyCode::Char('f') => self.cycle_filter(),
@@ -833,6 +867,102 @@ impl App {
                         self.todos.todos[idx].description = self.input.clone();
                         save_todos(&self.todos)?;
                         self.status_message = Some("Todo title updated".to_string());
+                    }
+                }
+                self.input.clear();
+                self.cursor_position = 0;
+                self.input_mode = InputMode::Normal;
+            }
+            KeyCode::Esc => {
+                self.input.clear();
+                self.cursor_position = 0;
+                self.input_mode = InputMode::Normal;
+                self.status_message = Some("Edit cancelled".to_string());
+            }
+            _ => {
+                // Reuse insert mode handling for text input
+                self.handle_insert_mode(key)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle due date editing mode key events
+    fn handle_due_date_mode(&mut self, key: event::KeyEvent) -> Result<()> {
+        use chrono::{NaiveDate, Utc, TimeZone};
+        
+        match key.code {
+            KeyCode::Enter => {
+                if let Some(idx) = self.selected_index {
+                    if idx < self.todos.todos.len() {
+                        let input = self.input.trim().to_lowercase();
+                        
+                        if input.is_empty() {
+                            // Clear due date
+                            self.todos.todos[idx].due_date = None;
+                            self.status_message = Some("Due date cleared".to_string());
+                        } else if input == "today" {
+                            self.todos.todos[idx].due_date = Some(Utc::now());
+                            self.status_message = Some("Due date set to today".to_string());
+                        } else if input == "tomorrow" {
+                            let tomorrow = Utc::now() + chrono::Duration::days(1);
+                            self.todos.todos[idx].due_date = Some(tomorrow);
+                            self.status_message = Some("Due date set to tomorrow".to_string());
+                        } else {
+                            // Try to parse as YYYY-MM-DD
+                            match NaiveDate::parse_from_str(&input, "%Y-%m-%d") {
+                                Ok(date) => {
+                                    let datetime = date.and_hms_opt(23, 59, 59)
+                                        .map(|dt| Utc.from_utc_datetime(&dt));
+                                    if let Some(dt) = datetime {
+                                        self.todos.todos[idx].due_date = Some(dt);
+                                        self.status_message = Some(format!("Due date set to {}", date));
+                                    }
+                                }
+                                Err(_) => {
+                                    self.status_message = Some("Invalid date format. Use YYYY-MM-DD".to_string());
+                                    return Ok(());
+                                }
+                            }
+                        }
+                        save_todos(&self.todos)?;
+                    }
+                }
+                self.input.clear();
+                self.cursor_position = 0;
+                self.input_mode = InputMode::Normal;
+            }
+            KeyCode::Esc => {
+                self.input.clear();
+                self.cursor_position = 0;
+                self.input_mode = InputMode::Normal;
+                self.status_message = Some("Due date edit cancelled".to_string());
+            }
+            _ => {
+                // Reuse insert mode handling for text input
+                self.handle_insert_mode(key)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Handle editing details mode key events
+    fn handle_editing_details_mode(&mut self, key: event::KeyEvent) -> Result<()> {
+        match key.code {
+            KeyCode::Enter => {
+                if let Some(idx) = self.selected_index {
+                    if idx < self.todos.todos.len() {
+                        // Set details to the input, or None if empty
+                        if self.input.trim().is_empty() {
+                            self.todos.todos[idx].details = None;
+                            self.status_message = Some("Details cleared".to_string());
+                        } else {
+                            self.todos.todos[idx].details = Some(self.input.clone());
+                            self.status_message = Some("Details updated".to_string());
+                        }
+                        save_todos(&self.todos)?;
                     }
                 }
                 self.input.clear();
@@ -1013,6 +1143,48 @@ impl App {
         if self.selected_index.is_some() {
             self.input_mode = InputMode::SettingPriority;
             self.status_message = Some("Enter priority (1-5) or 0 to clear".to_string());
+        } else {
+            self.status_message = Some("No todo selected".to_string());
+        }
+        Ok(())
+    }
+
+    /// Start editing details for selected todo
+    fn start_editing_details(&mut self) -> Result<()> {
+        if let Some(idx) = self.selected_index {
+            if idx < self.todos.todos.len() {
+                // Load existing details or start with empty
+                self.input = self.todos.todos[idx]
+                    .details
+                    .as_ref()
+                    .map(|s| s.clone())
+                    .unwrap_or_default();
+                self.cursor_position = self.input.len();
+                self.input_mode = InputMode::EditingDetails;
+                self.status_message = Some("Editing details (Enter to save, empty to clear)".to_string());
+            }
+        } else {
+            self.status_message = Some("No todo selected".to_string());
+        }
+        Ok(())
+    }
+
+    /// Prompt for due date
+    fn prompt_due_date(&mut self) -> Result<()> {
+        if let Some(idx) = self.selected_index {
+            if idx < self.todos.todos.len() {
+                // Load existing due date or start with empty
+                self.input = if let Some(due) = self.todos.todos[idx].due_date {
+                    due.format("%Y-%m-%d").to_string()
+                } else {
+                    String::new()
+                };
+                self.cursor_position = self.input.len();
+                self.input_mode = InputMode::EditingDueDate;
+                self.status_message = Some(
+                    "Enter due date (today, tomorrow, YYYY-MM-DD, or empty to clear)".to_string()
+                );
+            }
         } else {
             self.status_message = Some("No todo selected".to_string());
         }
