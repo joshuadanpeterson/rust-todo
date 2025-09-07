@@ -276,6 +276,8 @@ impl TodoList {
     /// - References allow multiple parts of code to read the same data
     /// - `collect()`: Transforms an iterator into a collection
     pub fn filter_todos(&self, filter: TodoFilter) -> Vec<&Todo> {
+        use chrono::Utc;
+        
         self.todos
             .iter() // Create an iterator over references
             .filter(|todo| match filter {
@@ -284,6 +286,23 @@ impl TodoList {
                 TodoFilter::All => true,
                 TodoFilter::Completed => todo.completed,
                 TodoFilter::Pending => !todo.completed,
+                TodoFilter::HighPriority => todo.priority.map_or(false, |p| p >= 4),
+                TodoFilter::MediumPriority => todo.priority.map_or(false, |p| p >= 2 && p <= 3),
+                TodoFilter::LowPriority => todo.priority.map_or(false, |p| p == 1),
+                TodoFilter::NoPriority => todo.priority.is_none(),
+                TodoFilter::Overdue => !todo.completed && todo.is_overdue(),
+                TodoFilter::DueToday => {
+                    !todo.completed && todo.due_date.map_or(false, |due| {
+                        due.date_naive() == Utc::now().date_naive()
+                    })
+                }
+                TodoFilter::DueSoon => {
+                    !todo.completed && todo.due_date.map_or(false, |due| {
+                        let days_until = (due - Utc::now()).num_days();
+                        days_until >= 0 && days_until <= 7
+                    })
+                }
+                TodoFilter::HasDueDate => todo.due_date.is_some(),
             })
             .collect() // Collect iterator results into a Vec
     }
@@ -300,6 +319,14 @@ pub enum TodoFilter {
     All,
     Completed,
     Pending,
+    HighPriority,    // Priority 4-5
+    MediumPriority,  // Priority 2-3
+    LowPriority,     // Priority 1
+    NoPriority,      // No priority set
+    Overdue,         // Due date has passed
+    DueToday,        // Due today
+    DueSoon,         // Due within 7 days
+    HasDueDate,      // Any todo with a due date
 }
 
 // Implement Default trait for TodoList

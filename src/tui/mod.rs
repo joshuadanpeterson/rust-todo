@@ -229,11 +229,7 @@ impl App {
 
     /// Draw the title bar
     fn draw_title(&self, frame: &mut Frame, area: Rect) {
-        let filter_text = match self.filter {
-            TodoFilter::All => "All Tasks",
-            TodoFilter::Completed => "Completed",
-            TodoFilter::Pending => "Pending",
-        };
+        let filter_text = self.get_filter_name();
 
         let title_spans = vec![
             Span::raw(" "),
@@ -262,17 +258,14 @@ impl App {
 
     /// Draw the todo list
     fn draw_todo_list(&mut self, frame: &mut Frame, area: Rect) {
-        // Get filtered todos
-        let filtered_indices: Vec<(usize, &crate::todo::Todo)> = self
-            .todos
-            .todos
+        // Use the filter_todos method for consistent filtering
+        let filtered_todos = self.todos.filter_todos(self.filter);
+        
+        // Map filtered todos back to their indices
+        let filtered_indices: Vec<(usize, &crate::todo::Todo)> = self.todos.todos
             .iter()
             .enumerate()
-            .filter(|(_, todo)| match self.filter {
-                TodoFilter::All => true,
-                TodoFilter::Completed => todo.completed,
-                TodoFilter::Pending => !todo.completed,
-            })
+            .filter(|(_, todo)| filtered_todos.contains(todo))
             .collect();
 
         // Create list items with beautiful styling
@@ -670,12 +663,32 @@ impl App {
             Line::from(vec![
                 Span::raw("    "),
                 Span::styled("f", Style::default().fg(self.theme.accent)),
-                Span::raw("       Cycle through filters"),
+                Span::raw("       Cycle through all filters"),
             ]),
             Line::from(vec![
                 Span::raw("    "),
-                Span::styled("1-3", Style::default().fg(self.theme.accent)),
-                Span::raw("     Quick filter selection"),
+                Span::styled("1", Style::default().fg(self.theme.accent)),
+                Span::raw("       All tasks"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("2", Style::default().fg(self.theme.accent)),
+                Span::raw("       Pending tasks"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("3", Style::default().fg(self.theme.accent)),
+                Span::raw("       Completed tasks"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("4-6", Style::default().fg(self.theme.accent)),
+                Span::raw("     Priority filters (High/Med/Low)"),
+            ]),
+            Line::from(vec![
+                Span::raw("    "),
+                Span::styled("7-0", Style::default().fg(self.theme.accent)),
+                Span::raw("     Due date filters"),
             ]),
             Line::from(""),
             Line::from(vec![
@@ -750,11 +763,52 @@ impl App {
             KeyCode::Char('D') => self.start_editing_details()?,
             KeyCode::Char('u') => self.prompt_due_date()?,
 
-            // Filters
+            // Filters - Basic
             KeyCode::Char('f') => self.cycle_filter(),
-            KeyCode::Char('1') => self.filter = TodoFilter::All,
-            KeyCode::Char('2') => self.filter = TodoFilter::Completed,
-            KeyCode::Char('3') => self.filter = TodoFilter::Pending,
+            KeyCode::Char('1') => {
+                self.filter = TodoFilter::All;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('2') => {
+                self.filter = TodoFilter::Pending;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('3') => {
+                self.filter = TodoFilter::Completed;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            
+            // Filters - Priority (with Alt modifier)
+            KeyCode::Char('4') => {
+                self.filter = TodoFilter::HighPriority;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('5') => {
+                self.filter = TodoFilter::MediumPriority;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('6') => {
+                self.filter = TodoFilter::LowPriority;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            
+            // Filters - Due dates
+            KeyCode::Char('7') => {
+                self.filter = TodoFilter::Overdue;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('8') => {
+                self.filter = TodoFilter::DueToday;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('9') => {
+                self.filter = TodoFilter::DueSoon;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
+            KeyCode::Char('0') => {
+                self.filter = TodoFilter::HasDueDate;
+                self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+            }
 
             // Priority
             KeyCode::Char('p') => self.prompt_priority()?,
@@ -1131,11 +1185,36 @@ impl App {
     /// Cycle through filters
     fn cycle_filter(&mut self) {
         self.filter = match self.filter {
-            TodoFilter::All => TodoFilter::Completed,
-            TodoFilter::Completed => TodoFilter::Pending,
-            TodoFilter::Pending => TodoFilter::All,
+            TodoFilter::All => TodoFilter::Pending,
+            TodoFilter::Pending => TodoFilter::Completed,
+            TodoFilter::Completed => TodoFilter::HighPriority,
+            TodoFilter::HighPriority => TodoFilter::MediumPriority,
+            TodoFilter::MediumPriority => TodoFilter::LowPriority,
+            TodoFilter::LowPriority => TodoFilter::NoPriority,
+            TodoFilter::NoPriority => TodoFilter::Overdue,
+            TodoFilter::Overdue => TodoFilter::DueToday,
+            TodoFilter::DueToday => TodoFilter::DueSoon,
+            TodoFilter::DueSoon => TodoFilter::HasDueDate,
+            TodoFilter::HasDueDate => TodoFilter::All,
         };
-        self.status_message = Some(format!("Filter: {:?}", self.filter));
+        self.status_message = Some(format!("Filter: {}", self.get_filter_name()));
+    }
+    
+    /// Get human-readable filter name
+    fn get_filter_name(&self) -> &str {
+        match self.filter {
+            TodoFilter::All => "All Tasks",
+            TodoFilter::Completed => "Completed",
+            TodoFilter::Pending => "Pending",
+            TodoFilter::HighPriority => "High Priority (4-5)",
+            TodoFilter::MediumPriority => "Medium Priority (2-3)",
+            TodoFilter::LowPriority => "Low Priority (1)",
+            TodoFilter::NoPriority => "No Priority",
+            TodoFilter::Overdue => "Overdue",
+            TodoFilter::DueToday => "Due Today",
+            TodoFilter::DueSoon => "Due Soon (7 days)",
+            TodoFilter::HasDueDate => "Has Due Date",
+        }
     }
 
     /// Prompt for priority setting
